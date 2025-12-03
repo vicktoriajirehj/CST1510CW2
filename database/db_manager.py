@@ -22,3 +22,26 @@ class DatabaseManager:
 
     def close(self):
         self.conn.close()
+from db_manager import DatabaseManager
+
+db = DatabaseManager()
+
+def create_incident(incident_id, category, severity, status, date_reported, resolution_time):
+    db.execute("""
+        INSERT INTO cyber_incidents 
+        (incident_id, category, severity, status, date_reported, resolution_time)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (incident_id, category, severity, status, date_reported, resolution_time))
+
+def read_incidents():
+    return db.fetch("SELECT * FROM cyber_incidents")
+
+def update_incident(incident_id, new_status):
+    db.execute("""
+        UPDATE cyber_incidents
+        SET status=?
+        WHERE incident_id=?
+    """, (new_status, incident_id))
+
+def delete_incident(incident_id):
+    db.execute("DELETE FROM cyber_incidents WHERE incident_id=?", (incident_id,))
