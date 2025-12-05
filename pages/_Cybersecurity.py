@@ -119,3 +119,26 @@ fig3 = px.pie(
     title="Incident Status Distribution"
 )
 st.plotly_chart(fig3)
+
+from ai.assistant import ask_ai
+
+st.subheader("🤖 Cybersecurity AI Assistant")
+
+user_question = st.text_area("Ask the AI about cybersecurity insights:")
+
+if st.button("Ask AI"):
+    # Provide context from your data
+    context = df.to_string()
+    full_prompt = f"""
+    You are assisting a cybersecurity analyst.
+    Here is the current incident dataset:
+    {context}
+
+    The user asks:
+    {user_question}
+
+    Provide a meaningful, analytical answer.
+    """
+
+    answer = ask_ai(full_prompt)
+    st.write(answer)

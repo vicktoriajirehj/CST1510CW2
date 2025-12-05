@@ -22,7 +22,6 @@ class DatabaseManager:
 
     def close(self):
         self.conn.close()
-from db_manager import DatabaseManager
 
 db = DatabaseManager()
 
