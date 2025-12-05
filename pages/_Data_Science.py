@@ -7,7 +7,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from database.db_manager import DatabaseManager
-from ai.assistant import ask_ai
+from services.ai_assistant import ask_ai
 
 st.title("📊 Data Science Dashboard")
 

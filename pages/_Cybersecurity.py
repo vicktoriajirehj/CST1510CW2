@@ -19,7 +19,7 @@ if "logged_in" not in st.session_state or st.session_state.logged_in is False:
 db = DatabaseManager()
 
 # Load incidents
-data = db.fetch("SELECT * FROM cyber_incidents")
+data = db.fetchall("SELECT * FROM cyber_incidents")
 df = pd.DataFrame(data, columns=[
     "id", "incident_id", "category", "severity", "status",
     "date_reported", "resolution_time"
@@ -120,7 +120,7 @@ fig3 = px.pie(
 )
 st.plotly_chart(fig3)
 
-from ai.assistant import ask_ai
+from services.ai_assistant import ask_ai
 
 st.subheader("🤖 Cybersecurity AI Assistant")
 

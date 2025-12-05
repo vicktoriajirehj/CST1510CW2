@@ -98,3 +98,81 @@ def update_ticket_status(ticket_id, new_status):
 def delete_ticket(ticket_id):
     db.execute("DELETE FROM it_tickets WHERE ticket_id=?", (ticket_id,))
 
+
+import sqlite3  # or whatever DB you use
+
+# Example database connection (adjust to your actual DB setup)
+db_connection = sqlite3.connect("your_database.db", check_same_thread=False)
+
+
+class DatabaseManager:
+    def __init__(self):
+        self.conn = db_connection
+        self.cursor = self.conn.cursor()
+
+    # You can add other methods here if you want
+
+
+# -----------------------------
+# Function to get user by username
+# -----------------------------
+def get_user_by_username(username):
+    cursor = db_connection.cursor()
+    cursor.execute("SELECT id, username, password_hash, role FROM users WHERE username = ?", (username,))
+    return cursor.fetchall()
+import sqlite3
+import bcrypt
+
+# Example database connection
+db_connection = sqlite3.connect("your_database.db", check_same_thread=False)
+
+class DatabaseManager:
+    def __init__(self):
+        self.conn = db_connection
+        self.cursor = self.conn.cursor()
+
+# Function to get a user
+def get_user_by_username(username):
+    cursor = db_connection.cursor()
+    cursor.execute("SELECT id, username, password_hash, role FROM users WHERE username = ?", (username,))
+    return cursor.fetchall()
+
+# Function to register a new user
+def register_user(username, password, role="user"):
+    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    cursor = db_connection.cursor()
+    cursor.execute(
+        "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+        (username, hashed, role)
+    )
+    db_connection.commit()
+class DatabaseManager:
+    def __init__(self):
+        self.conn = db_connection
+        self.cursor = self.conn.cursor()
+
+    def execute(self, query, params=()):
+        self.cursor.execute(query, params)
+        self.conn.commit()
+
+class DatabaseManager:
+    def __init__(self):
+        self.conn = db_connection
+        self.cursor = self.conn.cursor()
+
+    def execute(self, query, params=()):
+        self.cursor.execute(query, params)
+        self.conn.commit()
+
+    def fetch(self, query, params=()):
+        """Execute a query and return a single row"""
+        self.cursor.execute(query, params)
+        return self.cursor.fetchone()
+
+    def fetchall(self, query, params=()):
+        """Execute a query and return all rows"""
+        self.cursor.execute(query, params)
+        return self.cursor.fetchall()
+
+    def close(self):
+        self.conn.close()

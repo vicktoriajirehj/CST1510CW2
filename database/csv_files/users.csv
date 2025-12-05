@@ -1,1 +1,2 @@
-id,name,email
+id,username,password_hash,role
+
