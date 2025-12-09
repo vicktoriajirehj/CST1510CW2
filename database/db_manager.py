@@ -176,3 +176,14 @@ class DatabaseManager:
 
     def close(self):
         self.conn.close()
+
+#Integrating OOP Into CRUD
+# improve CRUD to return class objects for clarity
+from models.security_incident import SecurityIncident
+from database.db_manager import DatabaseManager
+
+db = DatabaseManager()
+
+def get_all_incidents():
+    rows = db.fetch("SELECT incident_id, category, severity, status, date_reported, resolution_time FROM cyber_incidents")
+    return [SecurityIncident(*row) for row in rows]
