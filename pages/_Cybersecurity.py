@@ -5,7 +5,7 @@ import plotly.express as px
 if "logged_in" not in st.session_state or st.session_state.logged_in is False:
     st.error("You must login first.")
     st.stop()
-st.title("🛡 Cybersecurity Dashboard")
+st.title("Cybersecurity Dashboard")
 #implementing role_based access control
 if st.session_state.role != "cyber":
     st.error("You do not have permission to view this dashboard.")
@@ -69,7 +69,7 @@ if st.button("Add Incident"):
     st.success("Incident added! Refresh the page to see it.")
 
 # update incident form
-st.subheader("✏️ Update Incident Status")
+st.subheader(" Update Incident Status")
 
 incident_to_update = st.selectbox(
     "Select Incident to Update",

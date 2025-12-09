@@ -9,7 +9,7 @@ import plotly.express as px
 from database.db_manager import DatabaseManager
 from services.ai_assistant import ask_ai
 
-st.title("🛠 IT Operations Dashboard")
+st.title("IT Operations Dashboard")
 
 # Protect page
 if "logged_in" not in st.session_state or st.session_state.logged_in is False:
