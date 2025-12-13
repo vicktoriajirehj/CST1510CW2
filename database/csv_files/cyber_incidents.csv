@@ -1,1 +1,6 @@
-id, incident_type,description,date
+incident_id,category,severity,status,date_reported,resolution_time
+INC001,Phishing,High,Open,2024-01-01,12
+INC002,Malware,Medium,Resolved,2024-01-03,6
+INC003,Ransomware,High,Investigating,2024-01-07,48
+INC004,DDoS,High,Open,2024-01-12,24
+INC005,Insider Threat,Low,Resolved,2024-01-15,5

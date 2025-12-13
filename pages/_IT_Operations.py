@@ -1,39 +1,37 @@
 import streamlit as st
-if "logged_in" not in st.session_state or st.session_state.logged_in is False:
-    st.error("You must login first.")
-    st.stop()
-
-import streamlit as st
 import pandas as pd
 import plotly.express as px
+
 from database.db_manager import DatabaseManager
+from database.crud import get_all_tickets
 from services.ai_assistant import ask_ai
 
-st.title("IT Operations Dashboard")
+st.title(" IT Operations Dashboard")
 
-# Protect page
-if "logged_in" not in st.session_state or st.session_state.logged_in is False:
-    st.error("You must login first.")
+# ---------------------------
+# AUTH CHECK
+# ---------------------------
+if "role" not in st.session_state:
+    st.session_state.role = None
+if st.session_state.role != "it":
+    st.error("Access denied: IT role required. Go to login page first.")
     st.stop()
 
 db = DatabaseManager()
 
 # ---------------------------
-# LOAD DATA
+# LOAD TICKETS USING OOP CRUD
 # ---------------------------
-data = db.fetch("SELECT * FROM it_tickets")
-df = pd.DataFrame(data, columns=[
-    "id", "ticket_id", "assigned_to", "status",
-    "priority", "created_date", "resolution_time"
-])
+tickets = get_all_tickets()
+df = pd.DataFrame([vars(t) for t in tickets])
 
-st.subheader("🎫 IT Ticket Table")
+st.subheader(" IT Support Tickets")
 st.dataframe(df)
 
 # ---------------------------
 # CREATE TICKET
 # ---------------------------
-st.subheader("➕ Create Ticket")
+st.subheader(" Create New Ticket")
 
 col1, col2 = st.columns(2)
 
@@ -53,33 +51,33 @@ if st.button("Add Ticket"):
         INSERT INTO it_tickets
         (ticket_id, assigned_to, status, priority, created_date, resolution_time)
         VALUES (?, ?, ?, ?, ?, ?)
-    """, (new_ticket_id, new_assigned, new_status, new_priority, str(new_created_date), new_resolution_time))
+    """, (new_ticket_id, new_assigned, new_status,
+          new_priority, str(new_created_date), new_resolution_time))
 
-    st.success("Ticket added! Refresh to update.")
+    st.success("Ticket added successfully! Refresh the page.")
 
 # ---------------------------
 # UPDATE TICKET STATUS
 # ---------------------------
-st.subheader("✏️ Update Ticket Status")
+st.subheader(" Update Ticket Status")
 
-ticket_to_update = st.selectbox(
-    "Select Ticket",
-    df["ticket_id"].tolist()
-)
+ticket_ids = [t.ticket_id for t in tickets]
 
-new_status_u = st.selectbox(
+ticket_to_update = st.selectbox("Select Ticket", ticket_ids)
+new_status_update = st.selectbox(
     "New Status",
     ["Open", "In Progress", "Resolved"],
-    key="ticket_update"
+    key="status_update"
 )
 
-if st.button("Update Ticket"):
+if st.button("Update Status"):
     db.execute("""
         UPDATE it_tickets
         SET status=?
         WHERE ticket_id=?
-    """, (new_status_u, ticket_to_update))
-    st.success("Ticket updated! Refresh page.")
+    """, (new_status_update, ticket_to_update))
+
+    st.success("Ticket updated successfully! Refresh the page.")
 
 # ---------------------------
 # DELETE TICKET
@@ -88,56 +86,68 @@ st.subheader("🗑 Delete Ticket")
 
 ticket_to_delete = st.selectbox(
     "Select Ticket to Delete",
-    df["ticket_id"].tolist(),
-    key="ticket_delete"
+    ticket_ids,
+    key="delete_ticket"
 )
 
 if st.button("Delete Ticket"):
-    db.execute("DELETE FROM it_tickets WHERE ticket_id=?", (ticket_to_delete,))
-    st.warning("Ticket deleted. Refresh page.")
+    db.execute(
+        "DELETE FROM it_tickets WHERE ticket_id=?",
+        (ticket_to_delete,)
+    )
+    st.warning("Ticket deleted.")
 
 # ---------------------------
 # VISUALIZATIONS
 # ---------------------------
-st.subheader("📊 Tickets by Status")
-fig1 = px.pie(df, names="status", title="Ticket Status Distribution")
+st.subheader(" Ticket Status Distribution")
+
+fig1 = px.pie(
+    df,
+    names="status",
+    title="Tickets by Status"
+)
 st.plotly_chart(fig1)
 
-st.subheader("⏳ Average Resolution Time by Staff")
+st.subheader(" Average Resolution Time per Staff")
+
+avg_df = df.groupby("assigned_to")["resolution_time"].mean().reset_index()
+
 fig2 = px.bar(
-    df.groupby("assigned_to")["resolution_time"].mean().reset_index(),
+    avg_df,
     x="assigned_to",
     y="resolution_time",
-    title="Avg Resolution Time per Staff Member"
+    title="Average Resolution Time by Staff"
 )
 st.plotly_chart(fig2)
 
 # ---------------------------
 # AI ASSISTANT
 # ---------------------------
-st.subheader("🤖 IT Support AI Assistant")
+st.subheader(" IT Support AI Assistant")
 
-user_question = st.text_area("Ask the AI about IT support:")
+question = st.text_area("Ask the AI about IT performance or tickets:")
 
-if st.button("Ask AI", key="it_ai"):
+if st.button("Ask AI"):
     context = df.to_string()
 
     prompt = f"""
-    You are an IT Service Desk Analyst AI.
+    You are an IT Service Management AI.
 
     Ticket data:
     {context}
 
     User question:
-    {user_question}
+    {question}
 
     Provide:
-    - Performance analysis
-    - Staff bottleneck detection
-    - Process inefficiencies
-    - Recommendations to improve resolution times
+    - performance insights
+    - staff workload analysis
+    - bottleneck detection
+    - process improvement recommendations
     """
 
     answer = ask_ai(prompt)
     st.write(answer)
+
 

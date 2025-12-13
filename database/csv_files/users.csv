@@ -1,2 +1,4 @@
 id,username,password_hash,role
-
+1,Vicktoria27,$2b$12$Nvsy65WuTd8NT4Lq.avBQe70QEr0IXXR1HJiz7fmTV.7NomuCSK2C,cyber
+2,Bob,$2b$12$S91RZcUFa5oJCHQZ8rj.NefhdieUkqMsyC7fAiJh/C0Tj3dx0pbAS,it
+3,Alice,$2b$12$hZ2TsqZxrdndm0BdLbMUxeNd5nJz9UjmuK2K/yVRGOXsEqTeV5Bsq,data

@@ -1,1 +1,6 @@
-id,dataset_name,source,created_at
+dataset_name,department,num_rows,file_size_mb,upload_date
+customer_logs,Cyber,120000,240.5,2024-01-05
+sales_data,Data,450000,350.2,2024-01-12
+server_metrics,IT,90000,120.0,2024-01-20
+ml_training_set,Data,800000,680.3,2024-02-01
+

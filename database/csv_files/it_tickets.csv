@@ -1,1 +1,5 @@
-id,ticket_number,issue,status
+ticket_id,assigned_to,status,priority,created_date,resolution_time
+TKT001,Alice,Open,High,2024-01-02,12
+TKT002,Bob,Resolved,Medium,2024-01-04,6
+TKT003,Charlie,In Progress,Low,2024-01-08,18
+

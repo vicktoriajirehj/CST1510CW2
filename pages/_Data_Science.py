@@ -1,48 +1,46 @@
 import streamlit as st
-if "logged_in" not in st.session_state or st.session_state.logged_in is False:
-    st.error("You must login first.")
-    st.stop()
-
-import streamlit as st
 import pandas as pd
 import plotly.express as px
+
 from database.db_manager import DatabaseManager
+from database.crud import get_all_datasets
 from services.ai_assistant import ask_ai
 
-st.title("📊 Data Science Dashboard")
+st.title(" Data Science Dashboard")
 
-# Protect page
-if "logged_in" not in st.session_state or st.session_state.logged_in is False:
-    st.error("You must login first.")
+# ---------------------------
+# AUTH CHECK
+# ---------------------------
+if "role" not in st.session_state:
+    st.session_state.role = None
+if st.session_state.role != "data":
+    st.error("Access denied: Data role required. Go to login page first.")
     st.stop()
 
 db = DatabaseManager()
 
 # ---------------------------
-# LOAD DATA
+# LOAD DATASETS USING OOP CRUD
 # ---------------------------
-data = db.fetch("SELECT * FROM datasets_metadata")
-df = pd.DataFrame(data, columns=[
-    "id", "dataset_name", "department", "num_rows",
-    "file_size_mb", "upload_date"
-])
+datasets = get_all_datasets()
+df = pd.DataFrame([vars(d) for d in datasets])
 
-st.subheader("📁 Dataset Catalog")
+st.subheader(" Dataset Catalog")
 st.dataframe(df)
 
 # ---------------------------
-# ADD NEW DATASET (CREATE)
+# CREATE DATASET
 # ---------------------------
-st.subheader("➕ Add New Dataset")
+st.subheader(" Add New Dataset")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    new_dataset_name = st.text_input("Dataset Name")
-    new_department = st.selectbox("Department", ["IT", "Cyber", "Data"])
+    new_name = st.text_input("Dataset Name")
+    new_department = st.selectbox("Department", ["Cyber", "Data", "IT"])
 
 with col2:
-    new_num_rows = st.number_input("Number of Rows", min_value=0)
+    new_rows = st.number_input("Number of Rows", min_value=0)
     new_size = st.number_input("File Size (MB)", min_value=0.0)
 
 new_date = st.date_input("Upload Date")
@@ -52,80 +50,94 @@ if st.button("Add Dataset"):
         INSERT INTO datasets_metadata
         (dataset_name, department, num_rows, file_size_mb, upload_date)
         VALUES (?, ?, ?, ?, ?)
-    """, (new_dataset_name, new_department, new_num_rows, new_size, str(new_date)))
+    """, (new_name, new_department, new_rows, new_size, str(new_date)))
 
-    st.success("Dataset added! Refresh to see changes.")
+    st.success("Dataset added successfully! Refresh the page.")
 
 # ---------------------------
-# UPDATE DATASET SIZE (UPDATE)
+# UPDATE DATASET SIZE
 # ---------------------------
-st.subheader("✏️ Update Dataset Size")
+st.subheader(" Update Dataset Size")
 
-dataset_to_update = st.selectbox(
-    "Select Dataset",
-    df["dataset_name"].tolist()
-)
+dataset_names = [d.name for d in datasets]
 
-new_dataset_size = st.number_input("New File Size (MB)", min_value=0.0, key="size_update")
+dataset_to_update = st.selectbox("Select Dataset", dataset_names)
+new_size_update = st.number_input("New File Size (MB)", min_value=0.0)
 
 if st.button("Update Size"):
     db.execute("""
         UPDATE datasets_metadata
         SET file_size_mb=?
         WHERE dataset_name=?
-    """, (new_dataset_size, dataset_to_update))
-    st.success("Dataset size updated! Refresh to update.")
+    """, (new_size_update, dataset_to_update))
+
+    st.success("Dataset updated successfully! Refresh the page.")
 
 # ---------------------------
 # DELETE DATASET
 # ---------------------------
-st.subheader("🗑 Delete Dataset")
+st.subheader(" Delete Dataset")
 
 dataset_to_delete = st.selectbox(
     "Select Dataset to Delete",
-    df["dataset_name"].tolist(),
+    dataset_names,
     key="delete_dataset"
 )
 
 if st.button("Delete Dataset"):
-    db.execute("DELETE FROM datasets_metadata WHERE dataset_name=?", (dataset_to_delete,))
-    st.warning("Dataset deleted. Refresh to update.")
+    db.execute(
+        "DELETE FROM datasets_metadata WHERE dataset_name=?",
+        (dataset_to_delete,)
+    )
+    st.warning("Dataset deleted.")
 
 # ---------------------------
 # VISUALIZATIONS
 # ---------------------------
-st.subheader("📈 Dataset Size by Department")
-fig1 = px.bar(df, x="department", y="file_size_mb", title="Total Data Storage by Department")
+st.subheader(" Storage Usage by Department")
+
+fig1 = px.bar(
+    df,
+    x="department",
+    y="size_mb",
+    title="Total Dataset Size per Department"
+)
 st.plotly_chart(fig1)
 
-st.subheader("📊 Rows per Dataset")
-fig2 = px.bar(df, x="dataset_name", y="num_rows", title="Dataset Row Counts")
+st.subheader(" Rows per Dataset")
+
+fig2 = px.bar(
+    df,
+    x="name",
+    y="num_rows",
+    title="Number of Rows per Dataset"
+)
 st.plotly_chart(fig2)
 
 # ---------------------------
 # AI ASSISTANT
 # ---------------------------
-st.subheader("🤖 AI Assistant (Data Governance Advisor)")
+st.subheader(" Data Governance AI Assistant")
 
-question = st.text_area("Ask the AI:")
+question = st.text_area("Ask the AI about datasets, storage, or governance:")
 
-if st.button("Ask AI", key="data_ai"):
+if st.button("Ask AI"):
     context = df.to_string()
 
     prompt = f"""
-    You are a Data Governance Assistant.
+    You are a Data Governance and Analytics AI.
 
-    Dataset catalog:
+    Dataset metadata:
     {context}
 
     User question:
     {question}
 
-    Provide insights about:
+    Provide insights on:
     - storage optimization
-    - archiving recommendations
+    - dataset redundancy
     - governance risks
-    - resource management
+    - archiving recommendations
     """
 
     response = ask_ai(prompt)

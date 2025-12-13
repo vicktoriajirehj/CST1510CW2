@@ -1,4 +1,4 @@
-from db_manager import DatabaseManager
+from database.db_manager import DatabaseManager
 import os
 
 USERS_FILE = "../users.txt"   # adjust if needed

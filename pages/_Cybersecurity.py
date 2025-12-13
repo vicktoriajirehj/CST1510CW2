@@ -1,144 +1,183 @@
 import streamlit as st
 import pandas as pd
-from database.db_manager import DatabaseManager
 import plotly.express as px
-if "logged_in" not in st.session_state or st.session_state.logged_in is False:
-    st.error("You must login first.")
-    st.stop()
-st.title("Cybersecurity Dashboard")
-#implementing role_based access control
+import os
+
+st.set_page_config(page_title="Cybersecurity Dashboard", layout="wide")
+
+st.title("Cybersecurity Incidents Dashboard")
+
+# ---------------------------
+# AUTH CHECK
+# ---------------------------
+if "role" not in st.session_state:
+    st.session_state.role = None
 if st.session_state.role != "cyber":
-    st.error("You do not have permission to view this dashboard.")
+    st.error("Access denied: cyber role required. Go to login page first")
     st.stop()
 
-# Protect page
-if "logged_in" not in st.session_state or st.session_state.logged_in is False:
-    st.error("You must login first.")
+# -------------------------------
+# Load CSV safely
+# -------------------------------
+CSV_PATH = os.path.join("database", "csv_files", "cyber_incidents.csv")
+
+if not os.path.exists(CSV_PATH):
+    st.error(f"CSV file not found: {CSV_PATH}")
     st.stop()
 
-db = DatabaseManager()
+df = pd.read_csv(CSV_PATH)
+df.columns = df.columns.str.strip()  # remove whitespace
 
-# Load incidents
-data = db.fetchall("SELECT * FROM cyber_incidents")
-df = pd.DataFrame(data, columns=[
-    "id", "incident_id", "category", "severity", "status",
-    "date_reported", "resolution_time"
-])
+# Ensure expected columns exist
+expected_cols = ['incident_id', 'category', 'severity', 'status', 'date_reported', 'resolution_time']
+missing_cols = [col for col in expected_cols if col not in df.columns]
+if missing_cols:
+    st.error(f"Missing columns in CSV: {missing_cols}")
+    st.stop()
 
-st.subheader("Incident Table")
-st.dataframe(df)
+# -------------------------------
+# CRUD OPERATIONS
+# -------------------------------
+st.subheader("Manage Incidents")
 
-
-st.subheader("📈 Incidents by Category")
-category_chart = px.bar(df, x="category", title="Incidents per Category")
-st.plotly_chart(category_chart)
-
-st.subheader("⏳ Average Resolution Time")
-resolution_chart = px.bar(
-    df.groupby("category")["resolution_time"].mean().reset_index(),
-    x="category",
-    y="resolution_time",
-    title="Average Resolution Time by Category"
-)
-st.plotly_chart(resolution_chart)
-
-#Adding CRud forms into the cybersecurity dashboard
-st.subheader("➕ Add New Incident")
-
+# ADD INCIDENT
+st.markdown("### Add New Incident")
 col1, col2 = st.columns(2)
 
 with col1:
-    new_incident_id = st.text_input("Incident ID")
-    new_category = st.selectbox("Category", ["Phishing", "Malware", "DDoS", "Unauthorized Access"])
+    new_incident_id = st.text_input("Incident ID", key="new_inc_id")
+    new_category = st.text_input("Category", key="new_category")
+    new_severity = st.selectbox("Severity", ["Low", "Medium", "High", "Critical"], key="new_severity")
 
 with col2:
-    new_severity = st.selectbox("Severity", ["Low", "Medium", "High"])
-    new_status = st.selectbox("Status", ["Open", "In Progress", "Resolved"])
+    new_status = st.selectbox("Status", ["Open", "Investigating", "Resolved"], key="new_status")
+    new_resolution = st.number_input("Resolution Time (Hours)", min_value=0, key="new_resolution")
 
-new_date = st.date_input("Date Reported")
-new_resolution = st.number_input("Resolution Time (hours)", min_value=0)
+date_reported = st.date_input("Date Reported", key="new_date")
 
-if st.button("Add Incident"):
-    db.execute("""
-        INSERT INTO cyber_incidents 
-        (incident_id, category, severity, status, date_reported, resolution_time)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (new_incident_id, new_category, new_severity, new_status,
-          str(new_date), new_resolution))
+if st.button("Add Incident", key="btn_add_incident"):
+    if new_incident_id.strip() == "":
+        st.error("Incident ID cannot be empty!")
+    else:
+        new_row = {
+            "incident_id": new_incident_id,
+            "category": new_category,
+            "severity": new_severity,
+            "status": new_status,
+            "date_reported": str(date_reported),
+            "resolution_time": new_resolution
+        }
+        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+        df.to_csv(CSV_PATH, index=False)
+        st.success("Incident added successfully!")
+        st.experimental_rerun()  # reload page to refresh data
 
-    st.success("Incident added! Refresh the page to see it.")
+# UPDATE INCIDENT STATUS
+st.markdown("### Update Incident Status")
+incident_ids = df["incident_id"].tolist()
 
-# update incident form
-st.subheader(" Update Incident Status")
+incident_to_update = st.selectbox("Select Incident", incident_ids, key="update_incident")
+new_status_update = st.selectbox("New Status", ["Open", "Investigating", "Resolved"], key="update_status")
 
-incident_to_update = st.selectbox(
-    "Select Incident to Update",
-    df["incident_id"].tolist()
+if st.button("Update Status", key="btn_update_status"):
+    df.loc[df["incident_id"] == incident_to_update, "status"] = new_status_update
+    df.to_csv(CSV_PATH, index=False)
+    st.success("Incident status updated!")
+    st.experimental_rerun()
+
+# DELETE INCIDENT
+st.markdown("### Delete Incident")
+incident_to_delete = st.selectbox("Select Incident to Delete", incident_ids, key="delete_incident")
+
+if st.button("Delete Incident", key="btn_delete_incident"):
+    df = df[df["incident_id"] != incident_to_delete]
+    df.to_csv(CSV_PATH, index=False)
+    st.warning("Incident deleted!")
+    st.experimental_rerun()
+
+# -------------------------------
+# Overview metrics
+# -------------------------------
+st.subheader("Overview Metrics")
+total_incidents = len(df)
+open_incidents = len(df[df['status'].str.lower() == 'open'])
+resolved_incidents = len(df[df['status'].str.lower() == 'resolved'])
+
+col1, col2, col3 = st.columns(3)
+col1.metric("Total Incidents", total_incidents)
+col2.metric("Open Incidents", open_incidents)
+col3.metric("Resolved Incidents", resolved_incidents)
+
+# -------------------------------
+# Severity histogram
+# -------------------------------
+st.subheader("Incidents by Severity")
+fig_severity = px.histogram(
+    df, x="severity", color="severity",
+    title="Incidents by Severity",
+    category_orders={"severity": ["Low", "Medium", "High", "Critical"]}
 )
+st.plotly_chart(fig_severity, use_container_width=True, key="severity_histogram")
 
-new_status_update = st.selectbox(
-    "New Status",
-    ["Open", "In Progress", "Resolved"]
+# -------------------------------
+# Status histogram
+# -------------------------------
+st.subheader("Incidents by Status")
+fig_status = px.histogram(
+    df, x="status", color="status",
+    title="Incidents by Status"
 )
+st.plotly_chart(fig_status, use_container_width=True, key="status_histogram")
 
-if st.button("Update Status"):
-    db.execute("""
-        UPDATE cyber_incidents
-        SET status=?
-        WHERE incident_id=?
-    """, (new_status_update, incident_to_update))
-
-    st.success(f"Incident {incident_to_update} updated! Refresh to see changes.")
-
-# delete incident form
-st.subheader("🗑 Delete Incident")
-
-incident_to_delete = st.selectbox(
-    "Select Incident to Delete",
-    df["incident_id"].tolist(),
-    key="delete_select"
+# -------------------------------
+# Category histogram
+# -------------------------------
+st.subheader("Incidents by Category")
+fig_category = px.histogram(
+    df, x="category", color="category",
+    title="Incidents by Category"
 )
+st.plotly_chart(fig_category, use_container_width=True, key="category_histogram")
 
-if st.button("Delete Incident"):
-    db.execute(
-        "DELETE FROM cyber_incidents WHERE incident_id=?",
-        (incident_to_delete,)
-    )
-    st.warning(f"Incident {incident_to_delete} deleted. Refresh to update.")
-
-#implementing status distribution chart
-st.subheader("📊 Incident Status Distribution")
-
-status_counts = df["status"].value_counts().reset_index()
-status_counts.columns = ["status", "count"]
-
-fig3 = px.pie(
-    status_counts,
-    names="status",
-    values="count",
-    title="Incident Status Distribution"
+# -------------------------------
+# Resolution time chart
+# -------------------------------
+st.subheader("Resolution Time Distribution (hours)")
+fig_resolution = px.histogram(
+    df, x="resolution_time",
+    nbins=20,
+    title="Resolution Time Distribution"
 )
-st.plotly_chart(fig3)
+st.plotly_chart(fig_resolution, use_container_width=True, key="resolution_histogram")
 
-from services.ai_assistant import ask_ai
+# -------------------------------
+# Optional: display raw data
+# -------------------------------
+st.subheader("Raw Incident Data")
+st.dataframe(df, use_container_width=True)
 
-st.subheader("🤖 Cybersecurity AI Assistant")
+st.subheader("AI Cybersecurity Assistant")
 
-user_question = st.text_area("Ask the AI about cybersecurity insights:")
+question = st.text_area("Ask the AI about your security incidents:")
 
 if st.button("Ask AI"):
-    # Provide context from your data
     context = df.to_string()
-    full_prompt = f"""
-    You are assisting a cybersecurity analyst.
-    Here is the current incident dataset:
+
+    prompt = f"""
+    You are a Cybersecurity Analyst AI.
+    Here is the incident data:
+
     {context}
 
     The user asks:
-    {user_question}
+    {question}
 
-    Provide a meaningful, analytical answer.
+    Provide:
+    - Risk analysis
+    - Incident prioritization
+    - Threat modeling
+    - Recommendations for remediation
     """
 
-    answer = ask_ai(full_prompt)
+    answer = ask_ai(prompt)
     st.write(answer)
