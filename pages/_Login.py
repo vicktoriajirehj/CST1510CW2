@@ -2,7 +2,7 @@ import streamlit as st
 import bcrypt
 from database.auth import get_user_by_username, register_user
 
-st.title("🔐 Login / Register")
+st.title(" Login / Register")
 
 # -----------------------------
 # Initialize session state
@@ -56,7 +56,7 @@ if tab == "Register":
 # LOGIN
 # -----------------------------
 if tab == "Login":
-    st.subheader("🔑 Login")
+    st.subheader(" Login")
 
     username = st.text_input("Username", key="login_username")
     password = st.text_input("Password", type="password", key="login_password")
@@ -75,10 +75,18 @@ if tab == "Login":
                     hashed_pw = user['password_hash']  # <- Updated column name
 
                     if verify_password(password, hashed_pw):
-                        st.success(f"Welcome, {username}!")
                         st.session_state['logged_in'] = True
                         st.session_state['username'] = username
-                        st.session_state['role'] = user.get('role', None)
+                        st.session_state['role'] = user["role"]
+
+                        st.success(" Login successful!")
+
+                        st.markdown(
+                            f"""
+                                 **User:** `{st.session_state.username}`  
+                                **Role:** `{st.session_state.role.upper()}`
+                                """
+                        )
                     else:
                         st.error("Incorrect password.")
 

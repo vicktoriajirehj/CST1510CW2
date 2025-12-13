@@ -29,7 +29,7 @@ st.divider()
 # --------------------------------
 # Overview Metrics (placeholder)
 # --------------------------------
-st.subheader("📌 Platform Overview")
+st.subheader(" Platform Overview")
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
@@ -44,7 +44,7 @@ st.divider()
 # --------------------------------
 # Navigation Buttons (FIXED)
 # --------------------------------
-st.subheader("🚀 Navigate to Dashboards")
+st.subheader(" Navigate to Dashboards")
 
 colA, colB, colC = st.columns(3)
 
